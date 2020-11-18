@@ -1,0 +1,71 @@
+```{r, child = "defensive-colmeans-ex.Rmd"}
+```
+
+----------------------------------------------------
+
+### Lösung:
+
+
+Minimalstlösung:
+```{r, col_means_def_1}
+# compute means of all numeric columns in <data>
+# input: a data.frame 
+# output: a data.frame containing the column means
+col_means <- function(data) {
+  stopifnot(is.data.frame(data), all(dim(data)) > 0)
+
+  numeric <- sapply(data, is.numeric)
+  data_numeric <- data[, numeric, drop = FALSE]
+
+  data.frame(vapply(data_numeric, mean, numeric(1)))
+}
+```
+```{r, col_means_test, error = TRUE}
+```
+
+Etwas ausgefeilter:
+```{r, col_means_def_2}
+# compute means of all columns in data for whose class "mean" is defined
+# data: anything that can be converted to a data.frame
+# na.rm: drop NAs?
+# output: a data.frame containing the column means of all numeric columns
+col_means <- function(data, na.rm = FALSE) {
+  checkmate::assert_flag(na.rm)
+  if (!is.data.frame(data)) {
+    data <- try(as.data.frame(data))
+    if (inherits(data, "try-error")) {
+      stop("<data> not convertable to a data.frame")
+    } else {
+      message("<data> converted to data.frame.")
+    }
+  }
+
+  # selecting columns for which mean can be computed:
+  use <- vapply(data, has_mean, logical(1))
+  # drop = FALSE so single columns work as expected!
+  data_numeric <- data[, use, drop = FALSE]
+  
+  # check for zero dims *after* selecting columns so all-character
+  # and all-factor data.frames get picked up as well.
+  if (any(dim(data_numeric) == 0)) {
+    rows_columns_zero <- as.character(c(10, 1) %*% (dim(data_numeric) == 0))
+    warning("<data> has zero ", 
+      switch(rows_columns_zero, 
+        "1"  = "columns", 
+        "10" = "rows", 
+        "11" = "rows and columns"), 
+      " for which a mean-method is defined")
+    return(data.frame())
+  }
+  
+  as.data.frame(lapply(data_numeric, mean, na.rm = na.rm))
+}
+# see methods("mean") for data types with mean-method
+has_mean <- function(x) {
+  is.numeric(x) |
+    inherits(x, what = c("Date", "POSIXct", "POSIXlt", "difftime"))
+}
+
+```
+```{r, col_means_test, error=TRUE}
+```

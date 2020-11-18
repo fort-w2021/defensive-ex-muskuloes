@@ -1,0 +1,66 @@
+```{r, child = "defensive-count-ex.Rmd"}
+```
+
+----------------------------------------------------
+
+### Lösung:
+
+a)  
+
+Implizite Annahmen über `supposedly_a_count` von denen abhängt ob der 
+ursprünglichen Code das erwartete Verhalten hat:
+
+- `supposedly_a_count` ist was numerisches
+- `supposedly_a_count` hat Länge 1
+- `supposedly_a_count` ist nicht `NA` oder `NaN`
+- `supposedly_a_count` ist nicht negativ
+- `supposedly_a_count` ist nicht unendlich
+
+
+b)  
+
+Strenge Variante:
+```{r, eval = FALSE}
+count_them <- function(supposedly_a_count) {
+  checkmate::assert_number(supposedly_a_count,
+                           lower = 0, finite = TRUE,
+                           null.ok = FALSE, na.ok = FALSE
+  ) # defaults, not necessary
+  if (!checkmate::test_count(supposedly_a_count)) {
+    warning(
+      "rounding ", supposedly_a_count,
+      "to the nearest integer."
+    )
+    supposedly_a_count <- round(supposedly_a_count)
+  }
+  #always return an integer:
+  as.integer(supposedly_a_count)
+}  
+```
+
+Nachsichtigere Variante:
+```{r, eval = FALSE}
+count_them <- function(supposedly_a_count) {
+  if (length(supposedly_a_count) > 1) {
+    warning("only using first element of supposedly_a_count")
+    supposedly_a_count <- supposedly_a_count[1]
+  }
+  checkmate::assert_number(supposedly_a_count, finite = TRUE)
+  if (!checkmate::test_count(supposedly_a_count)) {
+    warning(
+      "rounding ", supposedly_a_count,
+      "to the nearest non-negative integer."
+    )
+    as.integer(max(0, round(supposedly_a_count)))
+  }
+}
+```
+
+Zu pragmatische Variante (ohne Warnungen, und die erste Zeile könnte schiefgehen...):
+```{r, eval = FALSE}
+count_them <- function(supposedly_a_count) {
+  supposedly_a_count <- round(as.numeric(supposedly_a_count[1]))
+  checkmate::assert_count(supposedly_a_count)
+  as.integer(supposedly_a_count)
+}  
+```
